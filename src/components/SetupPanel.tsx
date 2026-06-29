@@ -101,6 +101,40 @@ export function SetupPanel({ onStartBattle }: SetupPanelProps) {
     setP2CardIds(config.p2.extraCardIds || (config.p2.extraCardId ? [config.p2.extraCardId] : []));
   };
 
+  const randomizePreset = (player: 1 | 2) => {
+    if (characters.length === 0) return;
+    const randomChar = characters[Math.floor(Math.random() * characters.length)];
+    handleCharSelect(player, randomChar.id);
+  };
+
+  const randomizeAll = (player: 1 | 2) => {
+    if (characters.length === 0 || diceList.length === 0) return;
+    const randomChar = characters[Math.floor(Math.random() * characters.length)];
+    
+    // Random dice
+    const randomDiceIds = Array(randomChar.diceCount).fill('').map(() => {
+      const randomDice = diceList[Math.floor(Math.random() * diceList.length)];
+      return randomDice.id;
+    });
+
+    // Random card (up to 1 if available)
+    let randomCardIds: string[] = [];
+    if (extraCards.length > 0) {
+      const randomCard = extraCards[Math.floor(Math.random() * extraCards.length)];
+      randomCardIds = [randomCard.id];
+    }
+
+    if (player === 1) {
+      setP1CharId(randomChar.id);
+      setP1DiceIds(randomDiceIds);
+      setP1CardIds(randomCardIds);
+    } else {
+      setP2CharId(randomChar.id);
+      setP2DiceIds(randomDiceIds);
+      setP2CardIds(randomCardIds);
+    }
+  };
+
   const deleteConfig = (id: string) => {
     setSavedConfigs(savedConfigs.filter(c => c.id !== id));
   };
@@ -141,7 +175,13 @@ export function SetupPanel({ onStartBattle }: SetupPanelProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Player 1 Setup */}
         <div className="bg-[#0d1017] p-6 rounded-xl border border-slate-800 shadow-xl border-t-2 border-t-indigo-500">
-          <h2 className="text-xl font-bold mb-4 text-white tracking-tight uppercase">Jugador 1</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white tracking-tight uppercase">Jugador 1</h2>
+            <div className="flex gap-2">
+              <button onClick={() => randomizePreset(1)} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-slate-300 uppercase rounded border border-slate-700 transition-colors" title="Personaje Aleatorio con Setup por Defecto">🎲 Preset</button>
+              <button onClick={() => randomizeAll(1)} className="px-2 py-1 bg-indigo-900/50 hover:bg-indigo-800/50 text-[10px] font-bold text-indigo-300 uppercase rounded border border-indigo-500/30 transition-colors" title="Todo Aleatorio">🎲 Todo</button>
+            </div>
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Seleccionar Personaje</label>
@@ -205,7 +245,13 @@ export function SetupPanel({ onStartBattle }: SetupPanelProps) {
 
         {/* Player 2 Setup */}
         <div className="bg-[#0d1017] p-6 rounded-xl border border-slate-800 shadow-xl border-t-2 border-t-rose-500">
-          <h2 className="text-xl font-bold mb-4 text-white tracking-tight uppercase">{mode === '1vBot' ? 'Bot (Enemigo)' : 'Jugador 2'}</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white tracking-tight uppercase">{mode === '1vBot' ? 'Bot (Enemigo)' : 'Jugador 2'}</h2>
+            <div className="flex gap-2">
+              <button onClick={() => randomizePreset(2)} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-slate-300 uppercase rounded border border-slate-700 transition-colors" title="Personaje Aleatorio con Setup por Defecto">🎲 Preset</button>
+              <button onClick={() => randomizeAll(2)} className="px-2 py-1 bg-rose-900/50 hover:bg-rose-800/50 text-[10px] font-bold text-rose-300 uppercase rounded border border-rose-500/30 transition-colors" title="Todo Aleatorio">🎲 Todo</button>
+            </div>
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Seleccionar Personaje</label>

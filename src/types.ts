@@ -32,9 +32,10 @@ export interface Character {
   primordialIcon: IconType;
   skillText: string;
   image?: string;
-  skillTriggerIcon: IconType | 'none';
-  skillEffectType: SkillEffectType;
-  skillEffectValue: number;
+  skillTriggerIcon?: IconType | 'none'; // legacy
+  skillEffectType?: SkillEffectType;    // legacy
+  skillEffectValue?: number;            // legacy
+  effects?: SkillEffect[];
   defaultDiceIds?: string[];
   defaultExtraCardIds?: string[];
 }

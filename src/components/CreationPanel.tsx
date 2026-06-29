@@ -24,6 +24,7 @@ export function CreationPanel() {
   const [charSkillValue, setCharSkillValue] = useState(1);
   const [charDefaultDiceIds, setCharDefaultDiceIds] = useState<string[]>([]);
   const [charDefaultExtraCardIds, setCharDefaultExtraCardIds] = useState<string[]>([]);
+  const [charEffects, setCharEffects] = useState<SkillEffect[]>([]);
 
   // Dice Form State
   const [diceName, setDiceName] = useState('');
@@ -38,26 +39,43 @@ export function CreationPanel() {
   const [cardImage, setCardImage] = useState('');
   const [cardEffects, setCardEffects] = useState<SkillEffect[]>([]);
   
-  // Staging for new effect
-  const [cardSkillTrigger, setCardSkillTrigger] = useState<IconType | 'none'>('none');
-  const [cardSkillType, setCardSkillType] = useState<SkillEffectType>('none');
-  const [cardSkillValue, setCardSkillValue] = useState(1);
+  // Staging for new effect (shared for card and character)
+  const [stagedSkillTrigger, setStagedSkillTrigger] = useState<IconType | 'none'>('none');
+  const [stagedSkillType, setStagedSkillType] = useState<SkillEffectType>('none');
+  const [stagedSkillValue, setStagedSkillValue] = useState(1);
 
   const handleAddCardEffect = () => {
-    if (cardSkillType === 'none') return;
+    if (stagedSkillType === 'none') return;
     setCardEffects([...cardEffects, {
       id: crypto.randomUUID(),
-      triggerIcon: cardSkillTrigger,
-      effectType: cardSkillType,
-      effectValue: cardSkillValue
+      triggerIcon: stagedSkillTrigger,
+      effectType: stagedSkillType,
+      effectValue: stagedSkillValue
     }]);
-    setCardSkillTrigger('none');
-    setCardSkillType('none');
-    setCardSkillValue(1);
+    setStagedSkillTrigger('none');
+    setStagedSkillType('none');
+    setStagedSkillValue(1);
+  };
+
+  const handleAddCharEffect = () => {
+    if (stagedSkillType === 'none') return;
+    setCharEffects([...charEffects, {
+      id: crypto.randomUUID(),
+      triggerIcon: stagedSkillTrigger,
+      effectType: stagedSkillType,
+      effectValue: stagedSkillValue
+    }]);
+    setStagedSkillTrigger('none');
+    setStagedSkillType('none');
+    setStagedSkillValue(1);
   };
 
   const handleRemoveCardEffect = (id: string) => {
     setCardEffects(cardEffects.filter(e => e.id !== id));
+  };
+
+  const handleRemoveCharEffect = (id: string) => {
+    setCharEffects(charEffects.filter(e => e.id !== id));
   };
 
   const handleCreateChar = (e: React.FormEvent) => {
@@ -69,9 +87,7 @@ export function CreationPanel() {
       primordialIcon: charPrimordial,
       skillText: charSkill,
       image: charImage,
-      skillTriggerIcon: charSkillTrigger,
-      skillEffectType: charSkillType,
-      skillEffectValue: charSkillValue,
+      effects: charEffects,
       defaultDiceIds: charDefaultDiceIds,
       defaultExtraCardIds: charDefaultExtraCardIds,
     };
@@ -94,9 +110,7 @@ export function CreationPanel() {
     setCharPrimordial('damage');
     setCharSkill('');
     setCharImage('');
-    setCharSkillTrigger('none');
-    setCharSkillType('none');
-    setCharSkillValue(1);
+    setCharEffects([]);
     setCharDefaultDiceIds([]);
     setCharDefaultExtraCardIds([]);
   };
@@ -109,9 +123,18 @@ export function CreationPanel() {
     setCharPrimordial(char.primordialIcon);
     setCharSkill(char.skillText);
     setCharImage(char.image || '');
-    setCharSkillTrigger(char.skillTriggerIcon);
-    setCharSkillType(char.skillEffectType);
-    setCharSkillValue(char.skillEffectValue);
+    setCharEffects(char.effects || []);
+    
+    // Legacy support for editing
+    if (!char.effects && char.skillEffectType && char.skillEffectType !== 'none') {
+      setCharEffects([{
+        id: crypto.randomUUID(),
+        triggerIcon: char.skillTriggerIcon || 'none',
+        effectType: char.skillEffectType,
+        effectValue: char.skillEffectValue || 0
+      }]);
+    }
+
     setCharDefaultDiceIds(char.defaultDiceIds || []);
     setCharDefaultExtraCardIds(char.defaultExtraCardIds || []);
   };
@@ -240,11 +263,27 @@ export function CreationPanel() {
             <textarea required value={charSkill} onChange={e => setCharSkill(e.target.value)} className="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2.5 h-16 resize-none text-sm" placeholder="Describe la habilidad..." />
           </div>
           <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/80 space-y-3">
-            <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Variables Habilidad (IA)</h4>
+            <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest flex justify-between items-center">
+              <span>Variables Habilidad (IA)</span>
+            </h4>
+            
+            <div className="space-y-2 mb-4">
+              {charEffects.map(effect => (
+                <div key={effect.id} className="flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-800 text-xs">
+                  <div className="flex gap-2 items-center">
+                    <span className="text-slate-400">Si: {effect.triggerIcon === 'none' ? 'Pasiva' : IconMap[effect.triggerIcon]}</span>
+                    <span className="text-indigo-500 font-bold">➔</span>
+                    <span className="text-white">{effect.effectType.toUpperCase()} {effect.effectValue > 0 ? '+' : ''}{effect.effectValue}</span>
+                  </div>
+                  <button type="button" onClick={() => handleRemoveCharEffect(effect.id)} className="text-rose-500 hover:text-rose-400 font-bold">X</button>
+                </div>
+              ))}
+            </div>
+
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Activador (Si sale...)</label>
-                <select value={charSkillTrigger} onChange={e => setCharSkillTrigger(e.target.value as any)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs">
+                <select value={stagedSkillTrigger} onChange={e => setStagedSkillTrigger(e.target.value as any)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs">
                   <option value="none">Ninguno / Pasiva</option>
                   {ALL_ICONS.map(icon => <option key={icon} value={icon}>{IconMap[icon]}</option>)}
                 </select>
@@ -253,7 +292,7 @@ export function CreationPanel() {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Efecto</label>
-                <select value={charSkillType} onChange={e => setCharSkillType(e.target.value as any)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs">
+                <select value={stagedSkillType} onChange={e => setStagedSkillType(e.target.value as any)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs">
                   <option value="none">Ninguno</option>
                   <option value="damage">Daño</option>
                   <option value="heal">Curar</option>
@@ -263,9 +302,10 @@ export function CreationPanel() {
               </div>
               <div className="w-20">
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Valor</label>
-                <input type="number" value={charSkillValue} onChange={e => setCharSkillValue(Number(e.target.value))} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs" />
+                <input type="number" value={stagedSkillValue} onChange={e => setStagedSkillValue(Number(e.target.value))} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs" />
               </div>
             </div>
+            <button type="button" onClick={handleAddCharEffect} disabled={stagedSkillType === 'none'} className="w-full py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded text-xs font-bold uppercase transition-colors">Añadir Efecto</button>
           </div>
           <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/80 space-y-3">
             <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Equipamiento por Defecto (Setup)</h4>
@@ -523,7 +563,7 @@ export function CreationPanel() {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Activador (Si sale...)</label>
-                <select value={cardSkillTrigger} onChange={e => setCardSkillTrigger(e.target.value as any)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs">
+                <select value={stagedSkillTrigger} onChange={e => setStagedSkillTrigger(e.target.value as any)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs">
                   <option value="none">Ninguno / Pasiva</option>
                   {ALL_ICONS.map(icon => <option key={icon} value={icon}>{IconMap[icon]}</option>)}
                 </select>
@@ -532,7 +572,7 @@ export function CreationPanel() {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Efecto</label>
-                <select value={cardSkillType} onChange={e => setCardSkillType(e.target.value as any)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs">
+                <select value={stagedSkillType} onChange={e => setStagedSkillType(e.target.value as any)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs">
                   <option value="none">Ninguno</option>
                   <option value="damage">Daño</option>
                   <option value="heal">Curar</option>
@@ -542,10 +582,10 @@ export function CreationPanel() {
               </div>
               <div className="w-20">
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Valor</label>
-                <input type="number" value={cardSkillValue} onChange={e => setCardSkillValue(Number(e.target.value))} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs" />
+                <input type="number" value={stagedSkillValue} onChange={e => setStagedSkillValue(Number(e.target.value))} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs" />
               </div>
             </div>
-            <button type="button" onClick={handleAddCardEffect} disabled={cardSkillType === 'none'} className="w-full py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded text-xs font-bold uppercase transition-colors">Añadir Efecto</button>
+            <button type="button" onClick={handleAddCardEffect} disabled={stagedSkillType === 'none'} className="w-full py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded text-xs font-bold uppercase transition-colors">Añadir Efecto</button>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Imagen (Opcional)</label>

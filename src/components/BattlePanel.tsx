@@ -114,22 +114,34 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
       if (multiplier > 0) {
         const totalVal = val * multiplier;
         if (type === 'damage') {
-          damageDealt += totalVal;
-          addLog(`⚡ ${sourceName} effect added ${totalVal >= 0 ? '+' : ''}${totalVal} Damage!`);
+          if (totalVal < 0) {
+            selfDamage += Math.abs(totalVal);
+            addLog(`⚡ ${sourceName} inflige ${Math.abs(totalVal)} de daño a sí mismo!`);
+          } else {
+            damageDealt += totalVal;
+            addLog(`⚡ ${sourceName} añade +${totalVal} Daño!`);
+          }
         } else if (type === 'heal') {
           healthHealed += totalVal;
-          addLog(`⚡ ${sourceName} effect added ${totalVal >= 0 ? '+' : ''}${totalVal} Heal!`);
+          addLog(`⚡ ${sourceName} añade ${totalVal >= 0 ? '+' : ''}${totalVal} Cura!`);
         } else if (type === 'shield') {
           shieldsGained += totalVal;
-          addLog(`⚡ ${sourceName} effect added ${totalVal >= 0 ? '+' : ''}${totalVal} Shield!`);
+          addLog(`⚡ ${sourceName} añade ${totalVal >= 0 ? '+' : ''}${totalVal} Escudo!`);
         } else if (type === 'add_dice') {
           newActive.extraDiceNextTurn = (newActive.extraDiceNextTurn || 0) + totalVal;
-          addLog(`⚡ ${sourceName} effect added ${totalVal >= 0 ? '+' : ''}${totalVal} extra dice for next turn!`);
+          addLog(`⚡ ${sourceName} añade ${totalVal >= 0 ? '+' : ''}${totalVal} dados extra para el próximo turno!`);
         }
       }
     };
 
-    applySkill(newActive.character.name + ' Skill', newActive.character.skillTriggerIcon, newActive.character.skillEffectType, newActive.character.skillEffectValue);
+    if (newActive.character.effects && newActive.character.effects.length > 0) {
+      newActive.character.effects.forEach(effect => {
+        applySkill(newActive.character.name + ' Skill', effect.triggerIcon, effect.effectType, effect.effectValue);
+      });
+    } else {
+      // Legacy support for single effect characters
+      applySkill(newActive.character.name + ' Skill', newActive.character.skillTriggerIcon || 'none', newActive.character.skillEffectType || 'none', newActive.character.skillEffectValue || 0);
+    }
     
     if (newActive.extraCards) {
       newActive.extraCards.forEach(card => {
@@ -375,10 +387,15 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
         </div>
 
         {player.extraCards && player.extraCards.length > 0 && (
-          <div className="space-y-2 mb-3">
+          <div className="space-y-3 mb-3">
             {player.extraCards.map((card, idx) => (
               <div key={idx}>
-                <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Extra Card: {card.name}</p>
+                <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1 flex justify-between">
+                  <span>Extra Card: {card.name}</span>
+                </p>
+                {card.image && (
+                  <img src={card.image} alt={card.name} className="w-full h-24 object-cover rounded-lg border border-amber-700/50 mb-2" />
+                )}
                 <div className="p-3 bg-amber-900/10 rounded-lg border border-amber-700/50">
                   <p className="text-xs leading-relaxed italic text-amber-200/80">"{card.skillText}"</p>
                 </div>
