@@ -1,0 +1,8 @@
+{
+  "name": "Dice & Cards Prototyper",
+  "description": "A custom card and dice game prototype environment, supporting character and dice creation, battle setup, and local 1v1/bot battles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
