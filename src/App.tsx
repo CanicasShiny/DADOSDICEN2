@@ -76,37 +76,86 @@ export default function App() {
     setActiveTab('setup');
   };
 
+  const handleExport = () => {
+    const data = {
+      characters: JSON.parse(localStorage.getItem('game_characters') || '[]'),
+      dice: JSON.parse(localStorage.getItem('game_dice') || '[]'),
+      cards: JSON.parse(localStorage.getItem('game_cards') || '[]'),
+      configs: JSON.parse(localStorage.getItem('game_configs') || '[]')
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dicequest_data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target?.result as string);
+          if (data.characters) localStorage.setItem('game_characters', JSON.stringify(data.characters));
+          if (data.dice) localStorage.setItem('game_dice', JSON.stringify(data.dice));
+          if (data.cards) localStorage.setItem('game_cards', JSON.stringify(data.cards));
+          if (data.configs) localStorage.setItem('game_configs', JSON.stringify(data.configs));
+          alert('Data imported successfully! The page will now reload.');
+          window.location.reload();
+        } catch (err) {
+          alert('Failed to import data: Invalid format.');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
   return (
     <div className="h-screen bg-[#0a0c10] text-slate-200 font-sans flex flex-col overflow-hidden">
-      <header className="h-14 bg-[#11141b] border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
+      <header className="h-14 bg-[#11141b] border-b border-slate-800 flex items-center justify-between px-6 shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center font-bold text-white">D</div>
           <h1 className="text-lg font-bold tracking-tight text-white">DICE<span className="text-indigo-400">QUEST</span> ENGINE</h1>
         </div>
         
-        <nav className="flex gap-1 bg-slate-900/50 p-1 rounded-lg border border-slate-800">
-          <button 
-            onClick={() => setActiveTab('battle')}
-            disabled={!battleState}
-            className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", 
-              !battleState ? "opacity-50 cursor-not-allowed text-slate-500" :
-              activeTab === 'battle' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
-            )}
-          >
-            BATTLE TABLE
-          </button>
-          <button 
-            onClick={() => setActiveTab('create')}
-            className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", activeTab === 'create' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
-          >
-            CREATION HUB
-          </button>
-          <button 
-            onClick={() => setActiveTab('setup')}
-            className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", activeTab === 'setup' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
-          >
-            SETUP
-          </button>
+        <nav className="flex gap-4 items-center">
+          <div className="flex gap-2">
+            <button onClick={handleExport} className="px-3 py-1.5 bg-slate-800 text-slate-300 text-xs font-bold rounded hover:bg-slate-700 transition-colors border border-slate-700">Export</button>
+            <button onClick={handleImport} className="px-3 py-1.5 bg-slate-800 text-slate-300 text-xs font-bold rounded hover:bg-slate-700 transition-colors border border-slate-700">Import</button>
+          </div>
+          
+          <div className="flex gap-1 bg-slate-900/50 p-1 rounded-lg border border-slate-800">
+            <button 
+              onClick={() => setActiveTab('battle')}
+              disabled={!battleState}
+              className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", 
+                !battleState ? "opacity-50 cursor-not-allowed text-slate-500" :
+                activeTab === 'battle' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+              )}
+            >
+              BATTLE TABLE
+            </button>
+            <button 
+              onClick={() => setActiveTab('create')}
+              className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", activeTab === 'create' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
+            >
+              CREATION HUB
+            </button>
+            <button 
+              onClick={() => setActiveTab('setup')}
+              className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", activeTab === 'setup' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
+            >
+              SETUP
+            </button>
+          </div>
         </nav>
 
         <div className="flex items-center gap-4">

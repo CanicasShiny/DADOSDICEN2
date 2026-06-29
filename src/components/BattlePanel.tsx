@@ -564,76 +564,116 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
           )}
 
           {phase === 'game_over' && (
-            <div className="text-center animate-in fade-in zoom-in duration-500 z-10 w-full max-w-2xl px-6">
-              <h3 className="text-4xl font-black text-rose-500 mb-6 uppercase tracking-widest">COMBAT ENDED</h3>
-              
-              <div className="grid grid-cols-2 gap-8 mb-8">
-                {/* P1 Stats */}
-                <div className="bg-slate-900/80 p-4 rounded-xl border border-indigo-500/30 flex flex-col">
-                  {p1.character.image && (
-                    <img src={p1.character.image} alt={p1.character.name} className="w-16 h-16 object-cover rounded-full mx-auto mb-3 border-2 border-indigo-500/50" />
-                  )}
-                  <h4 className="text-indigo-400 font-bold uppercase tracking-widest mb-3 border-b border-indigo-500/20 pb-2">{p1.character.name}</h4>
-                  <div className="space-y-2 text-left">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-slate-400 uppercase">Total Rolls</span>
-                      <span className="font-bold text-white">{stats.p1.totalRolls}</span>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
+            >
+              <div className="relative w-full max-w-3xl p-8 rounded-3xl border-2 border-indigo-500/50 bg-[#0d1017] shadow-[0_0_80px_-15px_rgba(99,102,241,0.4)] flex flex-col items-center">
+                {/* Celebratory background effect */}
+                <motion.div 
+                  initial={{ rotate: 0 }}
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 z-[-1] overflow-hidden rounded-3xl"
+                >
+                  <div className="absolute top-1/2 left-1/2 w-[200%] h-[200%] -translate-x-1/2 -translate-y-1/2 bg-[conic-gradient(from_0deg,transparent_0_340deg,rgba(99,102,241,0.2)_360deg)]" />
+                </motion.div>
+
+                <motion.h3 
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 mb-2 uppercase tracking-widest drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]"
+                >
+                  {p1.currentHealth <= 0 && p2.currentHealth <= 0 ? 'DRAW!' : 'VICTORY!'}
+                </motion.h3>
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-slate-300 mb-8 tracking-widest uppercase text-sm"
+                >
+                  {p1.currentHealth <= 0 && p2.currentHealth <= 0 
+                    ? 'Mutually Assured Destruction' 
+                    : `${p1.currentHealth > 0 ? p1.character.name : p2.character.name} dominates the arena`}
+                </motion.p>
+                
+                <div className="grid grid-cols-2 gap-8 mb-8 w-full">
+                  {/* P1 Stats */}
+                  <div className={clsx("p-6 rounded-2xl border flex flex-col relative overflow-hidden", p1.currentHealth > 0 ? "bg-indigo-900/30 border-indigo-500/50" : "bg-slate-900/50 border-slate-700/50 opacity-60 grayscale")}>
+                    {p1.character.image && (
+                      <img src={p1.character.image} alt={p1.character.name} className="w-20 h-20 object-cover rounded-full mx-auto mb-4 border-2 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
+                    )}
+                    <h4 className="text-indigo-400 font-bold uppercase tracking-widest mb-4 border-b border-indigo-500/20 pb-2 text-center text-lg">{p1.character.name}</h4>
+                    <div className="space-y-3 text-left w-full">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400 uppercase tracking-wider">Total Rolls</span>
+                        <span className="font-bold text-white text-lg">{stats.p1.totalRolls}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400 uppercase tracking-wider">Critical Hits</span>
+                        <span className="font-bold text-rose-400 text-lg">{stats.p1.criticalHits}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400 uppercase tracking-wider">Damage Dealt</span>
+                        <span className="font-bold text-emerald-400 text-lg">{stats.p1.damageDealt}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-slate-400 uppercase">Critical Hits (Skulls)</span>
-                      <span className="font-bold text-rose-400">{stats.p1.criticalHits}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-slate-400 uppercase">Damage Dealt</span>
-                      <span className="font-bold text-emerald-400">{stats.p1.damageDealt}</span>
+                  </div>
+  
+                  {/* P2 Stats */}
+                  <div className={clsx("p-6 rounded-2xl border flex flex-col relative overflow-hidden", p2.currentHealth > 0 ? "bg-rose-900/30 border-rose-500/50" : "bg-slate-900/50 border-slate-700/50 opacity-60 grayscale")}>
+                    {p2.character.image && (
+                      <img src={p2.character.image} alt={p2.character.name} className="w-20 h-20 object-cover rounded-full mx-auto mb-4 border-2 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
+                    )}
+                    <h4 className="text-rose-400 font-bold uppercase tracking-widest mb-4 border-b border-rose-500/20 pb-2 text-center text-lg">{p2.character.name}</h4>
+                    <div className="space-y-3 text-left w-full">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400 uppercase tracking-wider">Total Rolls</span>
+                        <span className="font-bold text-white text-lg">{stats.p2.totalRolls}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400 uppercase tracking-wider">Critical Hits</span>
+                        <span className="font-bold text-rose-400 text-lg">{stats.p2.criticalHits}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400 uppercase tracking-wider">Damage Dealt</span>
+                        <span className="font-bold text-emerald-400 text-lg">{stats.p2.damageDealt}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* P2 Stats */}
-                <div className="bg-slate-900/80 p-4 rounded-xl border border-rose-500/30 flex flex-col">
-                  {p2.character.image && (
-                    <img src={p2.character.image} alt={p2.character.name} className="w-16 h-16 object-cover rounded-full mx-auto mb-3 border-2 border-rose-500/50" />
-                  )}
-                  <h4 className="text-rose-400 font-bold uppercase tracking-widest mb-3 border-b border-rose-500/20 pb-2">{p2.character.name}</h4>
-                  <div className="space-y-2 text-left">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-slate-400 uppercase">Total Rolls</span>
-                      <span className="font-bold text-white">{stats.p2.totalRolls}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-slate-400 uppercase">Critical Hits (Skulls)</span>
-                      <span className="font-bold text-rose-400">{stats.p2.criticalHits}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-slate-400 uppercase">Damage Dealt</span>
-                      <span className="font-bold text-emerald-400">{stats.p2.damageDealt}</span>
-                    </div>
-                  </div>
-                </div>
+  
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1 }}
+                  className="flex gap-6 justify-center mt-4 z-10"
+                >
+                  <button 
+                    onClick={handleRematch}
+                    className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full font-black uppercase tracking-wider shadow-[0_0_20px_rgba(79,70,229,0.5)] transition-all hover:scale-105 active:scale-95 text-sm"
+                  >
+                    RE-MATCH
+                  </button>
+                  <button 
+                    onClick={() => setIsReplaying(true)}
+                    className="px-8 py-4 bg-emerald-600 text-white rounded-full font-black uppercase tracking-wider transition-all hover:bg-emerald-500 text-sm shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95"
+                  >
+                    VIEW REPLAY
+                  </button>
+                  <button 
+                    onClick={onEndGame}
+                    className="px-8 py-4 bg-slate-800 border border-slate-700 text-white rounded-full font-black uppercase tracking-wider transition-all hover:bg-slate-700 hover:border-slate-500 text-sm"
+                  >
+                    RETURN TO SETUP
+                  </button>
+                </motion.div>
               </div>
-
-              <div className="flex gap-4 justify-center">
-                <button 
-                  onClick={handleRematch}
-                  className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg font-bold uppercase tracking-wider shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95 text-sm"
-                >
-                  RE-MATCH
-                </button>
-                <button 
-                  onClick={() => setIsReplaying(true)}
-                  className="px-8 py-3 bg-emerald-600 text-white rounded-lg font-bold uppercase tracking-wider transition-all hover:bg-emerald-500 text-sm shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95"
-                >
-                  VIEW REPLAY
-                </button>
-                <button 
-                  onClick={onEndGame}
-                  className="px-8 py-3 bg-slate-800 border border-slate-700 text-white rounded-lg font-bold uppercase tracking-wider transition-all hover:bg-slate-700 text-sm"
-                >
-                  RETURN TO SETUP
-                </button>
-              </div>
-            </div>
+            </motion.div>
           )}
 
           {(phase === 'p1_turn' || phase === 'p2_turn') && (
