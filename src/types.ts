@@ -1,5 +1,14 @@
 export type IconType = 'damage' | 'magic' | 'defense' | 'health' | 'pet' | 'death';
 
+export const IconColorMap: Record<IconType, string> = {
+  damage: '#eab308',
+  magic: '#38bdf8',
+  defense: '#94a3b8',
+  health: '#f87171',
+  pet: '#15803d',
+  death: '#1e293b',
+};
+
 export type CardType = 'weapon' | 'pet' | 'vehicle';
 
 export type SkillEffectType = 'heal' | 'damage' | 'shield' | 'add_dice' | 'none';

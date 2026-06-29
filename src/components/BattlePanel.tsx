@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BattlePlayer, CustomDice, IconType } from '../types';
+import { BattlePlayer, CustomDice, IconType, IconColorMap } from '../types';
 import { GameIcon, IconMap } from './Icons';
 import { clsx } from '../lib/utils';
 import { ShieldAlert, HeartPulse, Zap, Activity } from 'lucide-react';
@@ -51,6 +51,22 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
   }]);
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayStep, setReplayStep] = useState(0);
+  
+  type Theme = 'dark' | 'cyberpunk' | 'fantasy';
+  const [theme, setTheme] = useState<Theme>('dark');
+  const [showStats, setShowStats] = useState(false);
+  const [isAutoBattle, setIsAutoBattle] = useState(false);
+
+  const getThemeClasses = () => {
+    switch (theme) {
+      case 'cyberpunk':
+        return 'bg-black bg-[linear-gradient(45deg,rgba(255,0,255,0.1)_0%,rgba(0,255,255,0.1)_100%)]';
+      case 'fantasy':
+        return 'bg-[#2a1c12] bg-[radial-gradient(circle_at_center,rgba(255,200,100,0.1)_0%,rgba(42,28,18,1)_100%)] border-amber-900/30';
+      default:
+        return 'bg-[#0a0c10] bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_#0a0c10_100%)]';
+    }
+  };
 
   const handleRematch = () => {
     setP1(initialP1);
@@ -360,23 +376,29 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
     }
   };
 
-  // Bot Logic
+  // Bot & Auto Battle Logic
   useEffect(() => {
-    if (phase === 'p2_turn' && p2.isBot) {
-      // Small delay for realism
+    const isBotTurn = phase === 'p2_turn' && p2.isBot;
+    const shouldAutoAct = isBotTurn || isAutoBattle;
+
+    if (shouldAutoAct && phase !== 'game_over') {
       const timer = setTimeout(() => {
-        if (currentRolls.length === 0 && !isRolling) {
-          handleRollTurn();
-        } else if (currentRolls.length > 0 && !isRolling) {
-          // Finished rolling, end turn after a short delay
-          setTimeout(() => {
-            handleEndTurn();
-          }, 2000);
+        if (phase === 'initiative') {
+          if (!initiativeRolls) handleInitiative();
+        } else if (phase === 'p1_turn' || phase === 'p2_turn') {
+          if (currentRolls.length === 0 && !isRolling) {
+            handleRollTurn();
+          } else if (currentRolls.length > 0 && !isRolling) {
+            // Finished rolling, end turn after a short delay
+            setTimeout(() => {
+              handleEndTurn();
+            }, 1500);
+          }
         }
-      }, 1500);
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [phase, currentRolls.length, isRolling, p2.isBot]);
+  }, [phase, currentRolls.length, isRolling, p2.isBot, isAutoBattle, initiativeRolls]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -490,7 +512,7 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
     const isFirst = replayStep === 0;
 
     return (
-      <div className="w-full h-full flex flex-col bg-[#0a0c10] bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_#0a0c10_100%)]">
+      <div className={`w-full h-full flex flex-col ${getThemeClasses()}`}>
         <header className="flex justify-between items-center p-4 border-b border-white/10 bg-black/50 z-20">
           <div className="flex items-center gap-4">
              <button onClick={() => setIsReplaying(false)} className="px-4 py-2 bg-slate-800 text-white rounded text-xs font-bold uppercase hover:bg-slate-700">Exit Replay</button>
@@ -520,9 +542,9 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
                 <p className="text-indigo-400 font-bold uppercase tracking-widest text-xs">Rolls Outcome</p>
                 <div className="flex flex-wrap justify-center gap-4 max-w-lg">
                   {currentRecord.rolls.map((roll, i) => (
-                    <div key={i} className="w-20 h-20 bg-slate-100 rounded-2xl shadow-[0_10px_15px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center p-1">
-                      <GameIcon type={roll.face} className="w-8 h-8 text-slate-800 mb-1" />
-                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider text-center leading-tight truncate w-full px-1">{roll.diceName}</span>
+                    <div key={i} className="w-20 h-20 rounded-2xl shadow-[inset_0_-4px_0_rgba(0,0,0,0.1),_0_10px_15px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center p-1" style={{ backgroundColor: IconColorMap[roll.face] }}>
+                      <GameIcon type={roll.face} className="w-8 h-8 mb-1 text-white drop-shadow-md" />
+                      <span className="text-[8px] font-black uppercase tracking-wider text-center leading-tight truncate w-full px-1 text-white/80">{roll.diceName}</span>
                     </div>
                   ))}
                 </div>
@@ -541,14 +563,72 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
   }
 
   return (
-    <div className="w-full h-full flex">
+    <div className={`w-full h-full flex ${getThemeClasses()}`}>
       
       {/* Left Player */}
       {renderPlayerStats(p1, false, phase === 'p1_turn')}
 
       {/* Center Action Area */}
-      <section className="flex-1 bg-[#0a0c10] relative flex flex-col items-center justify-center bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_#0a0c10_100%)]">
+      <section className="flex-1 relative flex flex-col items-center justify-center">
         
+        <div className="absolute top-4 left-4 z-20 flex gap-2">
+          <select 
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as Theme)}
+            className="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-bold uppercase rounded px-2 py-1"
+          >
+            <option value="dark">Dark Theme</option>
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="fantasy">Fantasy</option>
+          </select>
+          <button
+            onClick={() => setShowStats(!showStats)}
+            className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${showStats ? 'bg-indigo-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-300'}`}
+          >
+            Stats
+          </button>
+          <button
+            onClick={() => setIsAutoBattle(!isAutoBattle)}
+            className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${isAutoBattle ? 'bg-amber-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-300'}`}
+          >
+            Auto Battle {isAutoBattle ? 'ON' : 'OFF'}
+          </button>
+        </div>
+
+        {showStats && (
+          <div className="absolute top-16 left-4 z-20 bg-slate-900/95 border border-slate-700 rounded-lg p-4 w-64 shadow-2xl backdrop-blur-sm animate-in slide-in-from-top-4">
+            <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-3 border-b border-slate-700 pb-2">Battle Statistics</h4>
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] text-indigo-400 font-bold uppercase">{p1.character.name}</p>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <div className="bg-slate-950 rounded p-1.5 text-center border border-slate-800">
+                    <p className="text-[8px] text-slate-500 uppercase">Damage</p>
+                    <p className="text-xs font-bold text-emerald-400">{stats.p1.damageDealt}</p>
+                  </div>
+                  <div className="bg-slate-950 rounded p-1.5 text-center border border-slate-800">
+                    <p className="text-[8px] text-slate-500 uppercase">Crits</p>
+                    <p className="text-xs font-bold text-rose-400">{stats.p1.criticalHits}</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-rose-400 font-bold uppercase">{p2.character.name}</p>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <div className="bg-slate-950 rounded p-1.5 text-center border border-slate-800">
+                    <p className="text-[8px] text-slate-500 uppercase">Damage</p>
+                    <p className="text-xs font-bold text-emerald-400">{stats.p2.damageDealt}</p>
+                  </div>
+                  <div className="bg-slate-950 rounded p-1.5 text-center border border-slate-800">
+                    <p className="text-[8px] text-slate-500 uppercase">Crits</p>
+                    <p className="text-xs font-bold text-rose-400">{stats.p2.criticalHits}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 w-full flex flex-col items-center justify-center p-6 relative">
           {phase === 'initiative' && (
             <div className="text-center z-10">
@@ -556,7 +636,8 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
               <p className="text-slate-400 mb-8 max-w-sm mx-auto text-sm">Both players roll their dice. The player with the most primary icons begins.</p>
               <button 
                 onClick={handleInitiative}
-                className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-full font-black text-lg text-white shadow-xl shadow-indigo-500/30 border-t border-white/20 active:translate-y-1 transition-transform tracking-wider uppercase"
+                disabled={isAutoBattle}
+                className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 disabled:from-slate-700 disabled:to-slate-800 disabled:text-slate-500 rounded-full font-black text-lg text-white shadow-xl shadow-indigo-500/30 border-t border-white/20 active:translate-y-1 transition-transform tracking-wider uppercase"
               >
                 ROLL INITIATIVE
               </button>
@@ -687,7 +768,7 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
               {currentRolls.length === 0 ? (
                 <button 
                   onClick={handleRollTurn}
-                  disabled={(phase === 'p2_turn' && p2.isBot) || isRolling}
+                  disabled={(phase === 'p2_turn' && p2.isBot) || isRolling || isAutoBattle}
                   className="px-12 py-5 bg-gradient-to-r from-indigo-600 to-violet-600 disabled:from-slate-700 disabled:to-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed rounded-full font-black text-xl text-white shadow-2xl shadow-indigo-500/40 border-t border-white/20 active:translate-y-1 transition-transform tracking-widest uppercase"
                 >
                   ROLL FOR GLORY <span className="ml-2 text-xs opacity-50 font-mono">[SPACE]</span>
@@ -702,15 +783,15 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
                         initial={isRolling ? { rotateX: 0, rotateY: 0, rotateZ: 0 } : false}
                         animate={isRolling ? { rotateX: 720, rotateY: 1080, rotateZ: 360 } : { rotateX: 0, rotateY: 0, rotateZ: Math.random() * 20 - 10 }}
                         transition={{ duration: 1.5, ease: "easeOut" }}
-                        style={{ transformStyle: 'preserve-3d' }}
-                        className={clsx("w-20 h-20 bg-slate-100 rounded-2xl shadow-[inset_0_-4px_0_#d1d5db,_0_10px_15px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center p-1", !isRolling && "transform hover:scale-110 transition-transform")}
+                        style={{ transformStyle: 'preserve-3d', backgroundColor: IconColorMap[roll.face] }}
+                        className={clsx("w-20 h-20 rounded-2xl shadow-[inset_0_-4px_0_rgba(0,0,0,0.1),_0_10px_15px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center p-1", !isRolling && "transform hover:scale-110 transition-transform")}
                       >
                         {isRolling ? (
                           <div className="w-8 h-8 rounded-full bg-slate-300 mb-1" />
                         ) : (
-                          <GameIcon type={roll.face} className="w-8 h-8 text-slate-800 mb-1 animate-in zoom-in duration-300" />
+                          <GameIcon type={roll.face} className="w-8 h-8 mb-1 animate-in zoom-in duration-300 text-white drop-shadow-md" />
                         )}
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider text-center leading-tight truncate w-full px-1">{roll.diceName}</span>
+                        <span className="text-[8px] font-black uppercase tracking-wider text-center leading-tight truncate w-full px-1 text-white/80">{roll.diceName}</span>
                       </motion.div>
                     ))}
                   </div>
@@ -718,7 +799,7 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
                   <div className="flex gap-4">
                      <button 
                        onClick={handleEndTurn}
-                       disabled={(phase === 'p2_turn' && p2.isBot) || isRolling}
+                       disabled={(phase === 'p2_turn' && p2.isBot) || isRolling || isAutoBattle}
                        className="px-8 py-3 bg-emerald-600/20 border border-emerald-500/50 disabled:opacity-50 text-emerald-400 rounded-lg text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all tracking-wider uppercase"
                      >
                        END TURN & RESET SHIELDS <span className="ml-2 opacity-50 font-mono">[T]</span>

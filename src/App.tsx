@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { CreationPanel } from './components/CreationPanel';
 import { SetupPanel } from './components/SetupPanel';
 import { BattlePanel } from './components/BattlePanel';
+import { WikiPanel } from './components/WikiPanel';
 import { BattlePlayer, GameMode, PlayerSetup, Character, CustomDice, ExtraCard } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { clsx } from './lib/utils';
 import { Dices, Users, Swords } from 'lucide-react';
 
-type Tab = 'create' | 'setup' | 'battle';
+type Tab = 'create' | 'setup' | 'battle' | 'wiki';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('create');
@@ -150,6 +151,12 @@ export default function App() {
               CREATION HUB
             </button>
             <button 
+              onClick={() => setActiveTab('wiki')}
+              className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", activeTab === 'wiki' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
+            >
+              WIKI
+            </button>
+            <button 
               onClick={() => setActiveTab('setup')}
               className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", activeTab === 'setup' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
             >
@@ -169,6 +176,7 @@ export default function App() {
       <main className="flex-1 flex overflow-hidden">
         {activeTab === 'create' && <div className="flex-1 overflow-auto p-8"><CreationPanel /></div>}
         {activeTab === 'setup' && <div className="flex-1 overflow-auto p-8"><SetupPanel onStartBattle={handleStartBattle} /></div>}
+        {activeTab === 'wiki' && <div className="flex-1 overflow-auto p-8"><WikiPanel /></div>}
         {activeTab === 'battle' && battleState && <BattlePanel p1={battleState.p1} p2={battleState.p2} onEndGame={handleEndGame} />}
       </main>
 

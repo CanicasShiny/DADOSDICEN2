@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Character, CustomDice, ExtraCard, IconType, CardType, SkillEffect, SkillEffectType } from '../types';
+import { Character, CustomDice, ExtraCard, IconType, CardType, SkillEffect, SkillEffectType, IconColorMap } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { GameIcon, IconMap } from './Icons';
 
@@ -459,15 +459,17 @@ export function CreationPanel() {
               {diceFaces.map((face, index) => (
                 <div key={index} className="flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cara {index + 1}</span>
-                  <select value={face} onChange={(e) => {
-                    const newFaces = [...diceFaces];
-                    newFaces[index] = e.target.value as IconType;
-                    setDiceFaces(newFaces);
-                  }} className="bg-slate-900/50 border border-slate-800 rounded-lg p-2 text-sm flex items-center">
-                    {ALL_ICONS.map(icon => (
-                      <option key={icon} value={icon}>{IconMap[icon]}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1">
+                    <select value={face} onChange={(e) => {
+                      const newFaces = [...diceFaces];
+                      newFaces[index] = e.target.value as IconType;
+                      setDiceFaces(newFaces);
+                    }} className="flex-1 bg-slate-900/50 border border-slate-800 rounded-lg p-2 text-sm">
+                      {ALL_ICONS.map(icon => (
+                        <option key={icon} value={icon}>{IconMap[icon]}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               ))}
             </div>
@@ -475,8 +477,8 @@ export function CreationPanel() {
               <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-2 text-center">Vista Previa</h4>
               <div className="flex gap-2 justify-center flex-wrap">
                 {diceFaces.map((f, i) => (
-                  <div key={i} className="bg-slate-800 p-2 rounded-lg border border-slate-700 flex flex-col items-center justify-center w-12 h-12 shadow-inner" title={IconMap[f]}>
-                    <GameIcon type={f} className="w-6 h-6 text-slate-300" />
+                  <div key={i} className="p-2 rounded-lg border border-slate-700 flex flex-col items-center justify-center w-12 h-12 shadow-[inset_0_-2px_0_rgba(0,0,0,0.3)]" style={{ backgroundColor: IconColorMap[f] }} title={IconMap[f]}>
+                    <GameIcon type={f} className="w-6 h-6 text-white drop-shadow-md" />
                   </div>
                 ))}
               </div>
@@ -510,8 +512,8 @@ export function CreationPanel() {
                 </div>
                 <div className="flex gap-1.5 flex-wrap">
                   {d.faces.map((f, i) => (
-                    <div key={i} className="bg-slate-800 p-1 rounded-md border border-slate-700 flex items-center justify-center w-8 h-8" title={IconMap[f]}>
-                      <GameIcon type={f} className="w-4 h-4 text-slate-300" />
+                    <div key={i} className="p-1 rounded-md border border-slate-700 flex items-center justify-center w-8 h-8 shadow-inner" style={{ backgroundColor: IconColorMap[f] }} title={IconMap[f]}>
+                      <GameIcon type={f} className="w-4 h-4 text-white drop-shadow-md" />
                     </div>
                   ))}
                 </div>
