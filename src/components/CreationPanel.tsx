@@ -383,9 +383,12 @@ export function CreationPanel() {
                     key={card.id}
                     type="button"
                     onClick={() => {
-                      setCharDefaultExtraCardIds([...charDefaultExtraCardIds, card.id]);
+                      if (charDefaultExtraCardIds.length < 2) {
+                        setCharDefaultExtraCardIds([...charDefaultExtraCardIds, card.id]);
+                      }
                     }}
-                    className="text-xs px-2 py-1 rounded border bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors"
+                    disabled={charDefaultExtraCardIds.length >= 2}
+                    className="text-xs px-2 py-1 rounded border bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     + {card.name}
                   </button>
@@ -430,7 +433,14 @@ export function CreationPanel() {
                 <div className="flex items-center gap-3">
                   {c.image ? <img src={c.image} alt={c.name} className="w-10 h-10 rounded-md object-cover border border-slate-700" /> : <div className="w-10 h-10 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center"><GameIcon type={c.primordialIcon} className="w-5 h-5 text-slate-500" /></div>}
                   <div>
-                    <div className="font-bold text-white text-sm">{c.name}</div>
+                    <div className="font-bold text-white text-sm">
+                      {c.name}
+                      {c.defaultExtraCardIds && c.defaultExtraCardIds.length > 0 && (
+                        <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded ${c.defaultExtraCardIds.length > 2 ? "bg-rose-500/20 text-rose-400 border border-rose-500/50" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50"}`}>
+                          {c.defaultExtraCardIds.length} {c.defaultExtraCardIds.length === 1 ? 'Carta' : 'Cartas'} Extra
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[10px] text-slate-400 uppercase tracking-wider">Vida: {c.baseHealth} | Dados: {c.diceCount}</div>
                   </div>
                 </div>
