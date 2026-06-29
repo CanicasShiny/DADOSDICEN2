@@ -4,6 +4,7 @@ import { GameIcon, IconMap } from './Icons';
 import { clsx } from '../lib/utils';
 import { ShieldAlert, HeartPulse, Zap, Activity } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { motion } from 'motion/react';
 import { playSound } from '../lib/audio';
 
 interface BattlePanelProps {
@@ -31,6 +32,26 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
     p2: { totalRolls: 0, criticalHits: 0, damageDealt: 0 }
   });
 
+  type TurnRecord = {
+    turnNumber: number;
+    phase: Phase;
+    p1: BattlePlayer;
+    p2: BattlePlayer;
+    rolls: { face: IconType, diceName: string, id: string }[];
+    logs: {msg: string, time: string}[];
+  };
+
+  const [turnHistory, setTurnHistory] = useState<TurnRecord[]>([{
+    turnNumber: 1,
+    phase: 'initiative',
+    p1: initialP1,
+    p2: initialP2,
+    rolls: [],
+    logs: [{msg: '¡La batalla comienza!', time: new Date().toLocaleTimeString()}]
+  }]);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [replayStep, setReplayStep] = useState(0);
+
   const handleRematch = () => {
     setP1(initialP1);
     setP2(initialP2);
@@ -45,6 +66,16 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
       p1: { totalRolls: 0, criticalHits: 0, damageDealt: 0 },
       p2: { totalRolls: 0, criticalHits: 0, damageDealt: 0 }
     });
+    setTurnHistory([{
+      turnNumber: 1,
+      phase: 'initiative',
+      p1: initialP1,
+      p2: initialP2,
+      rolls: [],
+      logs: [{msg: '¡La revancha comienza!', time: new Date().toLocaleTimeString()}]
+    }]);
+    setIsReplaying(false);
+    setReplayStep(0);
   };
 
   const addLog = (msg: string) => setLog(prev => [{msg, time: new Date().toLocaleTimeString()}, ...prev].slice(0, 30));
@@ -72,13 +103,28 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
     addLog(`${p1.character.name} saca ${p1Matches} de su icono primordial.`);
     addLog(`${p2.character.name} saca ${p2Matches} de su icono primordial.`);
     
+    let nextPhase = 'p1_turn' as Phase;
     if (p1Matches >= p2Matches) {
       addLog(`¡${p1.character.name} gana la iniciativa!`);
       setPhase('p1_turn');
+      nextPhase = 'p1_turn';
     } else {
       addLog(`¡${p2.character.name} gana la iniciativa!`);
       setPhase('p2_turn');
+      nextPhase = 'p2_turn';
     }
+
+    setTurnHistory(prev => [
+      ...prev,
+      {
+        turnNumber: 1,
+        phase: nextPhase,
+        p1,
+        p2,
+        rolls: [...p1Rolls, ...p2Rolls],
+        logs: []
+      }
+    ]);
   };
 
   const processTurn = (activePlayer: BattlePlayer, targetPlayer: BattlePlayer, rolls: { face: IconType, diceName: string, id: string }[]) => {
@@ -246,7 +292,12 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
       const playerToProcess = { ...activePlayer, extraDiceNextTurn: 0 };
       const { newActive, newTarget, hitHappened, healHappened, totalDamageDealt, criticalHits } = processTurn(playerToProcess, targetPlayer, rolls);
       
-      if (hitHappened) playSound('hit');
+      if (criticalHits > 0) {
+         playSound('crit');
+      } else if (hitHappened) {
+         playSound('hit');
+      }
+      
       if (healHappened) setTimeout(() => playSound('heal'), 200);
 
       setStats(prev => {
@@ -268,6 +319,19 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
         setP2(newActive);
         setP1(newTarget);
       }
+      
+      setTurnHistory(prev => [
+        ...prev,
+        {
+          turnNumber: turnCounter,
+          phase,
+          p1: activeIsP1 ? newActive : newTarget,
+          p2: activeIsP1 ? newTarget : newActive,
+          rolls,
+          logs: []
+        }
+      ]);
+      
       setIsRolling(false);
     }, 1500); // 1.5s animation duration
   };
@@ -420,6 +484,62 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
     </aside>
   );
 
+  if (isReplaying) {
+    const currentRecord = turnHistory[replayStep];
+    const isLast = replayStep === turnHistory.length - 1;
+    const isFirst = replayStep === 0;
+
+    return (
+      <div className="w-full h-full flex flex-col bg-[#0a0c10] bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_#0a0c10_100%)]">
+        <header className="flex justify-between items-center p-4 border-b border-white/10 bg-black/50 z-20">
+          <div className="flex items-center gap-4">
+             <button onClick={() => setIsReplaying(false)} className="px-4 py-2 bg-slate-800 text-white rounded text-xs font-bold uppercase hover:bg-slate-700">Exit Replay</button>
+             <h2 className="text-emerald-400 font-bold uppercase tracking-widest text-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> REPLAY MODE
+             </h2>
+          </div>
+          <div className="flex items-center gap-4">
+             <button onClick={() => setReplayStep(r => Math.max(0, r - 1))} disabled={isFirst} className="px-4 py-2 bg-indigo-600 disabled:bg-slate-800 text-white rounded text-xs font-bold transition-colors">◀ PREV</button>
+             <span className="text-slate-300 font-mono text-xs px-4 py-1 bg-black/30 rounded">Step {replayStep + 1} / {turnHistory.length}</span>
+             <button onClick={() => setReplayStep(r => Math.min(turnHistory.length - 1, r + 1))} disabled={isLast} className="px-4 py-2 bg-indigo-600 disabled:bg-slate-800 text-white rounded text-xs font-bold transition-colors">NEXT ▶</button>
+          </div>
+        </header>
+
+        <div className="flex-1 flex overflow-hidden relative">
+          {renderPlayerStats(currentRecord.p1, false, currentRecord.phase === 'p1_turn')}
+
+          <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-white tracking-widest uppercase">
+                {currentRecord.phase === 'initiative' ? 'Initiative Phase' : `Turn ${currentRecord.turnNumber} - ${currentRecord.phase === 'p1_turn' ? p1.character.name : p2.character.name}`}
+              </h3>
+            </div>
+
+            {currentRecord.rolls.length > 0 ? (
+              <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-300">
+                <p className="text-indigo-400 font-bold uppercase tracking-widest text-xs">Rolls Outcome</p>
+                <div className="flex flex-wrap justify-center gap-4 max-w-lg">
+                  {currentRecord.rolls.map((roll, i) => (
+                    <div key={i} className="w-20 h-20 bg-slate-100 rounded-2xl shadow-[0_10px_15px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center p-1">
+                      <GameIcon type={roll.face} className="w-8 h-8 text-slate-800 mb-1" />
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider text-center leading-tight truncate w-full px-1">{roll.diceName}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+               <div className="opacity-50 flex flex-col items-center gap-4">
+                 <p className="text-slate-400 font-mono text-sm">No rolls in this step.</p>
+               </div>
+            )}
+          </div>
+
+          {renderPlayerStats(currentRecord.p2, true, currentRecord.phase === 'p2_turn')}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full flex">
       
@@ -501,6 +621,12 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
                   RE-MATCH
                 </button>
                 <button 
+                  onClick={() => setIsReplaying(true)}
+                  className="px-8 py-3 bg-emerald-600 text-white rounded-lg font-bold uppercase tracking-wider transition-all hover:bg-emerald-500 text-sm shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95"
+                >
+                  VIEW REPLAY
+                </button>
+                <button 
                   onClick={onEndGame}
                   className="px-8 py-3 bg-slate-800 border border-slate-700 text-white rounded-lg font-bold uppercase tracking-wider transition-all hover:bg-slate-700 text-sm"
                 >
@@ -529,16 +655,23 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
               ) : (
                 <div className="flex flex-col items-center gap-10 w-full animate-in slide-in-from-bottom-8">
                   {/* Dice Tray (High Density Theme) */}
-                  <div className="flex flex-wrap justify-center gap-4 max-w-lg">
+                  <div className="flex flex-wrap justify-center gap-4 max-w-lg" style={{ perspective: '1000px' }}>
                     {currentRolls.map((roll, i) => (
-                      <div key={i} className={clsx("w-20 h-20 bg-slate-100 rounded-2xl shadow-[inset_0_-4px_0_#d1d5db,_0_10px_15px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center p-1", isRolling ? "animate-[bounce_0.5s_infinite] opacity-80" : "transform hover:scale-110 transition-transform")} style={{ transform: isRolling ? undefined : `rotate(${Math.random() * 20 - 10}deg)` }}>
+                      <motion.div 
+                        key={i} 
+                        initial={isRolling ? { rotateX: 0, rotateY: 0, rotateZ: 0 } : false}
+                        animate={isRolling ? { rotateX: 720, rotateY: 1080, rotateZ: 360 } : { rotateX: 0, rotateY: 0, rotateZ: Math.random() * 20 - 10 }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        style={{ transformStyle: 'preserve-3d' }}
+                        className={clsx("w-20 h-20 bg-slate-100 rounded-2xl shadow-[inset_0_-4px_0_#d1d5db,_0_10px_15px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center p-1", !isRolling && "transform hover:scale-110 transition-transform")}
+                      >
                         {isRolling ? (
-                          <div className="w-8 h-8 rounded-full bg-slate-300 animate-pulse mb-1" />
+                          <div className="w-8 h-8 rounded-full bg-slate-300 mb-1" />
                         ) : (
                           <GameIcon type={roll.face} className="w-8 h-8 text-slate-800 mb-1 animate-in zoom-in duration-300" />
                         )}
                         <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider text-center leading-tight truncate w-full px-1">{roll.diceName}</span>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                   

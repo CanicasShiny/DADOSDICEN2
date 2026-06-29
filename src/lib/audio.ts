@@ -1,4 +1,4 @@
-export const playSound = (type: 'roll' | 'hit' | 'heal') => {
+export const playSound = (type: 'roll' | 'hit' | 'heal' | 'crit') => {
   const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
   if (!AudioContext) return;
   
@@ -27,6 +27,38 @@ export const playSound = (type: 'roll' | 'hit' | 'heal') => {
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.2);
+  } else if (type === 'crit') {
+    // high pitched explosive impact
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.3);
+    
+    const noise = ctx.createBufferSource();
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+    const output = buffer.getChannelData(0);
+    for (let i = 0; i < output.length; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+    noise.buffer = buffer;
+    
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.value = 1000;
+    
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(1, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    
+    noise.start(ctx.currentTime);
+    
+    gain.gain.setValueAtTime(0.8, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
   } else if (type === 'heal') {
     // ascending chime
     osc.type = 'sine';
