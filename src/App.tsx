@@ -3,12 +3,13 @@ import { CreationPanel } from './components/CreationPanel';
 import { SetupPanel } from './components/SetupPanel';
 import { BattlePanel } from './components/BattlePanel';
 import { WikiPanel } from './components/WikiPanel';
+import { DraftPanel } from './components/DraftPanel';
 import { BattlePlayer, GameMode, PlayerSetup, Character, CustomDice, ExtraCard } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { clsx } from './lib/utils';
 import { Dices, Users, Swords } from 'lucide-react';
 
-type Tab = 'create' | 'setup' | 'battle' | 'wiki';
+type Tab = 'create' | 'setup' | 'battle' | 'wiki' | 'draft';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('create');
@@ -157,6 +158,12 @@ export default function App() {
               WIKI
             </button>
             <button 
+              onClick={() => setActiveTab('draft')}
+              className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", activeTab === 'draft' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
+            >
+              DRAFT RUN
+            </button>
+            <button 
               onClick={() => setActiveTab('setup')}
               className={clsx("px-4 py-1.5 rounded-md text-xs font-semibold transition-colors", activeTab === 'setup' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200")}
             >
@@ -177,6 +184,7 @@ export default function App() {
         {activeTab === 'create' && <div className="flex-1 overflow-auto p-8"><CreationPanel /></div>}
         {activeTab === 'setup' && <div className="flex-1 overflow-auto p-8"><SetupPanel onStartBattle={handleStartBattle} /></div>}
         {activeTab === 'wiki' && <div className="flex-1 overflow-auto p-8"><WikiPanel /></div>}
+        {activeTab === 'draft' && <div className="flex-1 overflow-auto p-8"><DraftPanel /></div>}
         {activeTab === 'battle' && battleState && <BattlePanel p1={battleState.p1} p2={battleState.p2} onEndGame={handleEndGame} />}
       </main>
 
