@@ -117,11 +117,15 @@ export function SetupPanel({ onStartBattle }: SetupPanelProps) {
       return randomDice.id;
     });
 
-    // Random card (up to 1 if available)
+    // Random card (up to their limit if available)
     let randomCardIds: string[] = [];
     if (extraCards.length > 0) {
-      const randomCard = extraCards[Math.floor(Math.random() * extraCards.length)];
-      randomCardIds = [randomCard.id];
+      const cardsNeeded = randomChar.defaultExtraCardIds ? randomChar.defaultExtraCardIds.length : 1;
+      const count = Math.max(1, cardsNeeded > 2 ? 2 : cardsNeeded);
+      for (let i = 0; i < count; i++) {
+        const randomCard = extraCards[Math.floor(Math.random() * extraCards.length)];
+        randomCardIds.push(randomCard.id);
+      }
     }
 
     if (player === 1) {
@@ -206,12 +210,14 @@ export function SetupPanel({ onStartBattle }: SetupPanelProps) {
                 
                 <div className="flex justify-between items-center mt-4 mb-2">
                   <h4 className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Cartas Extras</h4>
-                  <button 
-                    onClick={() => setP1CardIds([...p1CardIds, ''])}
-                    className="text-[10px] text-amber-400 hover:text-amber-300 font-bold border border-amber-500/50 rounded px-2 py-0.5"
-                  >
-                    + Añadir Carta
-                  </button>
+                  {p1CardIds.length < Math.max(1, p1Char.defaultExtraCardIds?.length || 1) && (
+                    <button 
+                      onClick={() => setP1CardIds([...p1CardIds, ''])}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-bold border border-amber-500/50 rounded px-2 py-0.5"
+                    >
+                      + Añadir Carta
+                    </button>
+                  )}
                 </div>
                 <div className="space-y-2">
                   {p1CardIds.map((cardId, index) => (
@@ -276,12 +282,14 @@ export function SetupPanel({ onStartBattle }: SetupPanelProps) {
 
                 <div className="flex justify-between items-center mt-4 mb-2">
                   <h4 className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Cartas Extras</h4>
-                  <button 
-                    onClick={() => setP2CardIds([...p2CardIds, ''])}
-                    className="text-[10px] text-amber-400 hover:text-amber-300 font-bold border border-amber-500/50 rounded px-2 py-0.5"
-                  >
-                    + Añadir Carta
-                  </button>
+                  {p2CardIds.length < Math.max(1, p2Char.defaultExtraCardIds?.length || 1) && (
+                    <button 
+                      onClick={() => setP2CardIds([...p2CardIds, ''])}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-bold border border-amber-500/50 rounded px-2 py-0.5"
+                    >
+                      + Añadir Carta
+                    </button>
+                  )}
                 </div>
                 <div className="space-y-2">
                   {p2CardIds.map((cardId, index) => (

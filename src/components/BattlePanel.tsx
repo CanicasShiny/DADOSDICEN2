@@ -10,7 +10,7 @@ import { playSound } from '../lib/audio';
 interface BattlePanelProps {
   p1: BattlePlayer;
   p2: BattlePlayer;
-  onEndGame: () => void;
+  onEndGame: (winner?: string) => void;
 }
 
 type Phase = 'initiative' | 'p1_turn' | 'p2_turn' | 'game_over';
@@ -747,7 +747,7 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
                     VIEW REPLAY
                   </button>
                   <button 
-                    onClick={onEndGame}
+                    onClick={() => onEndGame(p1.currentHealth > 0 ? 'p1' : 'p2')}
                     className="px-8 py-4 bg-slate-800 border border-slate-700 text-white rounded-full font-black uppercase tracking-wider transition-all hover:bg-slate-700 hover:border-slate-500 text-sm"
                   >
                     RETURN TO SETUP
