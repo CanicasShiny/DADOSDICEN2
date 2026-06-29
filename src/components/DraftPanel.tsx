@@ -34,6 +34,7 @@ export function DraftPanel() {
 
   const [battleP1, setBattleP1] = useState<BattlePlayer | null>(null);
   const [battleP2, setBattleP2] = useState<BattlePlayer | null>(null);
+  const [defeatedEnemies, setDefeatedEnemies] = useState<Character[]>([]);
 
   const startDraft = () => {
     if (characters.length < 3) {
@@ -49,6 +50,7 @@ export function DraftPanel() {
     setDraftedChar(null);
     setDraftedDice([]);
     setDraftedCards([]);
+    setDefeatedEnemies([]);
     
     const shuffledChars = shuffle(characters).slice(0, 3);
     setOptions(shuffledChars);
@@ -151,6 +153,9 @@ export function DraftPanel() {
     if (winnerId === 'p1_draft') {
       const newWins = wins + 1;
       setWins(newWins);
+      if (battleP2) {
+        setDefeatedEnemies(prev => [...prev, battleP2.character]);
+      }
       if (newWins >= 5) {
         setPhase('victory');
       } else {
@@ -356,13 +361,90 @@ export function DraftPanel() {
         </div>
       )}
 
-      {phase === 'victory' && (
-        <div className="text-center space-y-8 py-12 animate-in zoom-in">
-          <h2 className="text-6xl font-black text-amber-400 uppercase tracking-tighter drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]">CHAMPION</h2>
-          <p className="text-emerald-400 text-xl font-bold uppercase tracking-widest">You survived the gauntlet!</p>
+      {phase === 'victory' && draftedChar && (
+        <div className="flex flex-col items-center justify-center space-y-12 py-12 animate-in zoom-in duration-700">
+          <div className="text-center space-y-4">
+            <h2 className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-600 uppercase tracking-tighter drop-shadow-[0_0_40px_rgba(251,191,36,0.6)] animate-pulse">
+              CHAMPION
+            </h2>
+            <p className="text-emerald-400 text-2xl font-bold uppercase tracking-widest animate-bounce">
+              You survived the gauntlet!
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-b from-indigo-900/50 to-slate-900/90 p-1 rounded-3xl shadow-[0_0_50px_rgba(99,102,241,0.3)] max-w-3xl w-full border border-indigo-500/50 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer skew-x-12" />
+            <div className="bg-[#0d1017] p-8 rounded-[22px] h-full flex flex-col items-center relative z-10">
+              <h3 className="text-indigo-400 font-bold uppercase tracking-widest mb-8 text-xl">The Winning Build</h3>
+              
+              <div className="flex flex-col items-center gap-6 w-full">
+                {draftedChar.image ? (
+                  <img src={draftedChar.image} alt={draftedChar.name} className="w-32 h-32 object-cover rounded-2xl border-4 border-amber-500/80 shadow-[0_0_30px_rgba(245,158,11,0.4)]" />
+                ) : (
+                  <div className="w-32 h-32 bg-slate-800 rounded-2xl flex items-center justify-center border-4 border-amber-500/80 shadow-[0_0_30px_rgba(245,158,11,0.4)]">
+                     <GameIcon type={draftedChar.primordialIcon} className="w-16 h-16 text-amber-500" />
+                  </div>
+                )}
+                <div className="text-center">
+                  <h4 className="text-4xl font-black text-white">{draftedChar.name}</h4>
+                  <p className="text-slate-400 text-sm mt-2 italic max-w-md mx-auto">"{draftedChar.skillText}"</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8 w-full mt-6 pt-6 border-t border-slate-800/80">
+                  <div>
+                    <h5 className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-4 text-center">Dice Arsenal</h5>
+                    <div className="flex flex-wrap justify-center gap-3">
+                      {draftedDice.map((d, i) => (
+                        <div key={i} className="px-4 py-2 bg-slate-900 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)] rounded-lg text-sm text-amber-400 font-bold text-center flex-1 min-w-[120px]">
+                          {d.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {draftedCards.length > 0 && (
+                    <div>
+                      <h5 className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-4 text-center">Magic Cards</h5>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {draftedCards.map((c, i) => (
+                          <div key={i} className="px-4 py-2 bg-slate-900 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)] rounded-lg text-sm text-emerald-400 font-bold text-center flex-1 min-w-[120px]">
+                            {c.name}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-4xl w-full">
+            <h3 className="text-center text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">Fallen Foes</h3>
+            <div className="flex flex-wrap justify-center gap-4">
+              {defeatedEnemies.map((enemy, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-2 animate-in slide-in-from-bottom-8 fade-in" style={{ animationDelay: `${idx * 150}ms`, animationFillMode: 'both' }}>
+                  <div className="relative">
+                    {enemy.image ? (
+                      <img src={enemy.image} alt={enemy.name} className="w-16 h-16 object-cover rounded-lg border-2 border-slate-700 grayscale opacity-70" />
+                    ) : (
+                      <div className="w-16 h-16 bg-slate-800 rounded-lg flex items-center justify-center border-2 border-slate-700 grayscale opacity-70">
+                         <GameIcon type={enemy.primordialIcon} className="w-8 h-8 text-slate-500" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-red-900/20 rounded-lg flex items-center justify-center pointer-events-none">
+                      <span className="text-red-500 font-black text-2xl drop-shadow-md">✕</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{enemy.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <button 
             onClick={() => setPhase('intro')}
-            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 rounded font-bold text-white transition-colors uppercase tracking-wider mt-8"
+            className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-full font-black text-xl text-white shadow-[0_0_30px_rgba(79,70,229,0.5)] transition-all uppercase tracking-widest mt-8 hover:scale-105 active:scale-95"
           >
             Play Again
           </button>
