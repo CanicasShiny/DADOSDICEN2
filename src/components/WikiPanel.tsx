@@ -16,20 +16,36 @@ export function WikiPanel() {
           <h2 className="text-3xl font-black tracking-tight text-white uppercase">WIKI & GALLERY</h2>
           <p className="text-slate-400 mt-2">View all existing characters, dice, and cards in your local engine.</p>
         </div>
-        <div className="flex gap-2">
-          {(['all', 'characters', 'dice', 'cards'] as const).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors border ${
-                filter === f 
-                  ? 'bg-indigo-600 border-indigo-500 text-white' 
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+        <div className="flex gap-4 items-center">
+          <button
+            onClick={() => {
+              const exportData = JSON.stringify({
+                characters,
+                diceList,
+                extraCards
+              }, null, 2);
+              navigator.clipboard.writeText(exportData);
+              alert('Copied to clipboard! Paste it to the AI assistant to save it as default base.');
+            }}
+            className="px-4 py-2 bg-rose-600/20 text-rose-400 border border-rose-500/50 rounded text-xs font-bold uppercase tracking-wider hover:bg-rose-600/40 transition-colors"
+          >
+            Export to Clipboard
+          </button>
+          <div className="flex gap-2">
+            {(['all', 'characters', 'dice', 'cards'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors border ${
+                  filter === f 
+                    ? 'bg-indigo-600 border-indigo-500 text-white' 
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
