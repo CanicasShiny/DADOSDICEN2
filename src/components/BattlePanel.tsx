@@ -15,6 +15,81 @@ interface BattlePanelProps {
 
 type Phase = 'initiative' | 'p1_turn' | 'p2_turn' | 'game_over';
 
+type Theme = 'dark' | 'cyberpunk' | 'fantasy';
+
+const ThemeBackground = ({ theme, p1, p2 }: { theme: Theme, p1: BattlePlayer, p2: BattlePlayer }) => {
+  if (theme === 'dark') {
+    return (
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-[#050505]">
+        {/* Subtle grid */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+           backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+           backgroundSize: '24px 24px'
+        }} />
+        {/* Gentle atmospheric glows */}
+        <div className="absolute -left-40 -top-40 w-[40rem] h-[40rem] blur-[120px] opacity-20 rounded-full mix-blend-screen" style={{ backgroundColor: IconColorMap[p1.character.primordialIcon] }} />
+        <div className="absolute -right-40 -bottom-40 w-[40rem] h-[40rem] blur-[120px] opacity-20 rounded-full mix-blend-screen" style={{ backgroundColor: IconColorMap[p2.character.primordialIcon] }} />
+      </div>
+    );
+  }
+
+  if (theme === 'cyberpunk') {
+    return (
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-black">
+        {/* Cyber grid */}
+        <div className="absolute inset-0 opacity-20" style={{
+           backgroundImage: 'linear-gradient(rgba(0, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 0, 255, 0.2) 1px, transparent 1px)',
+           backgroundSize: '40px 40px',
+           transform: 'perspective(500px) rotateX(60deg)',
+           transformOrigin: 'bottom'
+        }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black" />
+        
+        {/* Neon glows based on players */}
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[30rem] h-[30rem] blur-[100px] opacity-30 rounded-full mix-blend-screen" style={{ backgroundColor: IconColorMap[p1.character.primordialIcon] }} />
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[30rem] h-[30rem] blur-[100px] opacity-30 rounded-full mix-blend-screen" style={{ backgroundColor: IconColorMap[p2.character.primordialIcon] }} />
+      </div>
+    );
+  }
+
+  if (theme === 'fantasy') {
+    return (
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex">
+        {/* P1 Side */}
+        <div className="w-1/2 h-full relative border-r border-amber-900/50">
+          <div 
+             className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-luminosity grayscale" 
+             style={{ backgroundImage: p1.character.image ? `url(${p1.character.image})` : undefined }} 
+          />
+          <div 
+             className="absolute inset-0"
+             style={{ background: `linear-gradient(to right, ${IconColorMap[p1.character.primordialIcon]}40, transparent)` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1a100a] via-transparent to-[#1a100a] opacity-90" />
+        </div>
+        
+        {/* P2 Side */}
+        <div className="w-1/2 h-full relative border-l border-amber-900/50">
+          <div 
+             className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-luminosity grayscale" 
+             style={{ backgroundImage: p2.character.image ? `url(${p2.character.image})` : undefined, transform: 'scaleX(-1)' }} 
+          />
+          <div 
+             className="absolute inset-0"
+             style={{ background: `linear-gradient(to left, ${IconColorMap[p2.character.primordialIcon]}40, transparent)` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-l from-[#1a100a] via-transparent to-[#1a100a] opacity-90" />
+        </div>
+        
+        {/* Global overlays for fantasy */}
+        <div className="absolute inset-0 bg-[#2a1c12] opacity-40 mix-blend-overlay" />
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattlePanelProps) {
   const [phase, setPhase] = useState<Phase>('initiative');
   const [p1, setP1] = useState<BattlePlayer>(initialP1);
@@ -52,21 +127,9 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayStep, setReplayStep] = useState(0);
   
-  type Theme = 'dark' | 'cyberpunk' | 'fantasy';
   const [theme, setTheme] = useState<Theme>('dark');
   const [showStats, setShowStats] = useState(false);
   const [isAutoBattle, setIsAutoBattle] = useState(false);
-
-  const getThemeClasses = () => {
-    switch (theme) {
-      case 'cyberpunk':
-        return 'bg-black bg-[linear-gradient(45deg,rgba(255,0,255,0.1)_0%,rgba(0,255,255,0.1)_100%)]';
-      case 'fantasy':
-        return 'bg-[#2a1c12] bg-[radial-gradient(circle_at_center,rgba(255,200,100,0.1)_0%,rgba(42,28,18,1)_100%)] border-amber-900/30';
-      default:
-        return 'bg-[#0a0c10] bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_#0a0c10_100%)]';
-    }
-  };
 
   const handleRematch = () => {
     setP1(initialP1);
@@ -512,7 +575,8 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
     const isFirst = replayStep === 0;
 
     return (
-      <div className={`w-full h-full flex flex-col ${getThemeClasses()}`}>
+      <div className={`w-full h-full flex flex-col relative overflow-hidden ${theme === 'fantasy' ? 'bg-[#1a100a]' : 'bg-[#0a0c10]'}`}>
+        <ThemeBackground theme={theme} p1={currentRecord.p1} p2={currentRecord.p2} />
         <header className="flex justify-between items-center p-4 border-b border-white/10 bg-black/50 z-20">
           <div className="flex items-center gap-4">
              <button onClick={() => setIsReplaying(false)} className="px-4 py-2 bg-slate-800 text-white rounded text-xs font-bold uppercase hover:bg-slate-700">Exit Replay</button>
@@ -527,8 +591,10 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
           </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden relative">
-          {renderPlayerStats(currentRecord.p1, false, currentRecord.phase === 'p1_turn')}
+        <div className="flex-1 flex overflow-hidden relative z-10">
+          <div className="z-10 flex shrink-0">
+            {renderPlayerStats(currentRecord.p1, false, currentRecord.phase === 'p1_turn')}
+          </div>
 
           <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
             <div className="text-center mb-8">
@@ -556,20 +622,25 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
             )}
           </div>
 
-          {renderPlayerStats(currentRecord.p2, true, currentRecord.phase === 'p2_turn')}
+          <div className="z-10 flex shrink-0">
+            {renderPlayerStats(currentRecord.p2, true, currentRecord.phase === 'p2_turn')}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`w-full h-full flex ${getThemeClasses()}`}>
+    <div className={`w-full h-full flex relative overflow-hidden ${theme === 'fantasy' ? 'bg-[#1a100a]' : 'bg-[#0a0c10]'}`}>
+      <ThemeBackground theme={theme} p1={p1} p2={p2} />
       
       {/* Left Player */}
-      {renderPlayerStats(p1, false, phase === 'p1_turn')}
+      <div className="z-10 flex shrink-0">
+        {renderPlayerStats(p1, false, phase === 'p1_turn')}
+      </div>
 
       {/* Center Action Area */}
-      <section className="flex-1 relative flex flex-col items-center justify-center">
+      <section className="flex-1 relative flex flex-col items-center justify-center z-10">
         
         <div className="absolute top-4 left-4 z-20 flex gap-2">
           <select 
@@ -857,7 +928,9 @@ export function BattlePanel({ p1: initialP1, p2: initialP2, onEndGame }: BattleP
       </section>
 
       {/* Right Player */}
-      {renderPlayerStats(p2, true, phase === 'p2_turn')}
+      <div className="z-10 flex shrink-0">
+        {renderPlayerStats(p2, true, phase === 'p2_turn')}
+      </div>
     </div>
   );
 }

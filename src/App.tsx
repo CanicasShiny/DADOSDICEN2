@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreationPanel } from './components/CreationPanel';
 import { SetupPanel } from './components/SetupPanel';
 import { BattlePanel } from './components/BattlePanel';
@@ -8,6 +8,7 @@ import { BattlePlayer, GameMode, PlayerSetup, Character, CustomDice, ExtraCard }
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { clsx } from './lib/utils';
 import { Dices, Users, Swords } from 'lucide-react';
+import { defaultCharacters, defaultDice, defaultCards } from './data/defaults';
 
 type Tab = 'create' | 'setup' | 'battle' | 'wiki' | 'draft';
 
@@ -15,9 +16,18 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('create');
   const [battleState, setBattleState] = useState<{ p1: BattlePlayer; p2: BattlePlayer } | null>(null);
   
-  const [characters] = useLocalStorage<Character[]>('game_characters', []);
-  const [diceList] = useLocalStorage<CustomDice[]>('game_dice', []);
-  const [extraCards] = useLocalStorage<ExtraCard[]>('game_cards', []);
+  const [characters, setCharacters] = useLocalStorage<Character[]>('game_characters', []);
+  const [diceList, setDiceList] = useLocalStorage<CustomDice[]>('game_dice', []);
+  const [extraCards, setExtraCards] = useLocalStorage<ExtraCard[]>('game_cards', []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('game_initialized')) {
+      if (characters.length === 0) setCharacters(defaultCharacters);
+      if (diceList.length === 0) setDiceList(defaultDice);
+      if (extraCards.length === 0) setExtraCards(defaultCards);
+      localStorage.setItem('game_initialized', 'true');
+    }
+  }, []);
 
   const handleStartBattle = (mode: GameMode, p1Setup: PlayerSetup, p2Setup: PlayerSetup) => {
     try {

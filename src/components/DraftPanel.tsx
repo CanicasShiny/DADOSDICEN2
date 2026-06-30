@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Character, CustomDice, ExtraCard, BattlePlayer } from '../types';
 import { GameIcon, IconMap } from './Icons';
@@ -8,6 +8,7 @@ type DraftPhase = 'intro' | 'select_character' | 'select_dice' | 'select_cards' 
 
 // Helper to shuffle an array
 function shuffle<T>(array: T[]): T[] {
+  if (!Array.isArray(array)) return [];
   const newArr = [...array];
   for (let i = newArr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -21,32 +22,70 @@ export function DraftPanel() {
   const [diceList] = useLocalStorage<CustomDice[]>('game_dice', []);
   const [extraCards] = useLocalStorage<ExtraCard[]>('game_cards', []);
 
-  const [phase, setPhase] = useState<DraftPhase>('intro');
-  const [wins, setWins] = useState(0);
+  const getInitialState = () => {
+    try {
+      const saved = localStorage.getItem('draft_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed === 'object' && parsed !== null && parsed.phase) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing draft_state:', e);
+    }
+    return null;
+  };
+
+  const initialState = getInitialState();
+
+  const [phase, setPhase] = useState<DraftPhase>(initialState?.phase || 'intro');
+  const [wins, setWins] = useState(initialState?.wins || 0);
+  const [level, setLevel] = useState(initialState?.level || 1);
 
   // Draft state
-  const [options, setOptions] = useState<any[]>([]);
+  const [options, setOptions] = useState<any[]>(Array.isArray(initialState?.options) ? initialState.options : []);
   
-  const [draftedChar, setDraftedChar] = useState<Character | null>(null);
-  const [draftedDice, setDraftedDice] = useState<CustomDice[]>([]);
-  const [draftedCards, setDraftedCards] = useState<ExtraCard[]>([]);
-  const [cardsToDraft, setCardsToDraft] = useState(0);
+  const [draftedChar, setDraftedChar] = useState<Character | null>(initialState?.draftedChar || null);
+  const [draftedDice, setDraftedDice] = useState<CustomDice[]>(Array.isArray(initialState?.draftedDice) ? initialState.draftedDice : []);
+  const [draftedCards, setDraftedCards] = useState<ExtraCard[]>(Array.isArray(initialState?.draftedCards) ? initialState.draftedCards : []);
+  
+  const [targetDiceCount, setTargetDiceCount] = useState(initialState?.targetDiceCount || 0);
+  const [targetCardCount, setTargetCardCount] = useState(initialState?.targetCardCount || 0);
 
-  const [battleP1, setBattleP1] = useState<BattlePlayer | null>(null);
-  const [battleP2, setBattleP2] = useState<BattlePlayer | null>(null);
-  const [defeatedEnemies, setDefeatedEnemies] = useState<Character[]>([]);
+  const [battleP1, setBattleP1] = useState<BattlePlayer | null>(initialState?.battleP1 || null);
+  const [battleP2, setBattleP2] = useState<BattlePlayer | null>(initialState?.battleP2 || null);
+  const [defeatedEnemies, setDefeatedEnemies] = useState<Character[]>(Array.isArray(initialState?.defeatedEnemies) ? initialState.defeatedEnemies : []);
+
+  const [showDebug, setShowDebug] = useState(false);
+
+  useEffect(() => {
+    if (phase === 'intro') {
+      localStorage.removeItem('draft_state');
+    } else {
+      try {
+        localStorage.setItem('draft_state', JSON.stringify({
+          phase, wins, level, options, draftedChar, draftedDice, draftedCards,
+          targetDiceCount, targetCardCount, battleP1, battleP2, defeatedEnemies
+        }));
+      } catch (e) {
+        console.error("Failed to save draft state to localStorage", e);
+      }
+    }
+  }, [phase, wins, level, options, draftedChar, draftedDice, draftedCards, targetDiceCount, targetCardCount, battleP1, battleP2, defeatedEnemies]);
 
   const startDraft = () => {
-    if (characters.length < 3) {
+    if (!Array.isArray(characters) || characters.length < 3) {
       alert("Necesitas al menos 3 personajes creados para jugar este modo.");
       return;
     }
-    if (diceList.length < 3) {
+    if (!Array.isArray(diceList) || diceList.length < 3) {
       alert("Necesitas al menos 3 dados creados para jugar este modo.");
       return;
     }
     
     setWins(0);
+    setLevel(1);
     setDraftedChar(null);
     setDraftedDice([]);
     setDraftedCards([]);
@@ -57,36 +96,34 @@ export function DraftPanel() {
     setPhase('select_character');
   };
 
+  const continueLevelUp = () => {
+    const newLevel = level + 1;
+    setLevel(newLevel);
+    
+    setTargetDiceCount(draftedDice.length + 1);
+    setTargetCardCount(draftedCards.length + 1);
+    
+    const shuffledDice = shuffle(diceList).slice(0, 3);
+    setOptions(shuffledDice);
+    setPhase('select_dice');
+  };
+
   const handleSelectChar = (char: Character) => {
     setDraftedChar(char);
-    if (char.diceCount > 0) {
+    
+    const diceNeeded = char.diceCount;
+    setTargetDiceCount(diceNeeded);
+    
+    const cardsNeeded = char.defaultExtraCardIds ? char.defaultExtraCardIds.length : 1;
+    const count = Math.max(1, cardsNeeded);
+    const finalCount = count > 2 ? 2 : count;
+    setTargetCardCount(finalCount);
+
+    if (diceNeeded > 0) {
       const shuffledDice = shuffle(diceList).slice(0, 3);
       setOptions(shuffledDice);
       setPhase('select_dice');
-    } else {
-      checkCards(char);
-    }
-  };
-
-  const handleSelectDice = (dice: CustomDice) => {
-    const newDiceList = [...draftedDice, dice];
-    setDraftedDice(newDiceList);
-    
-    if (draftedChar && newDiceList.length < draftedChar.diceCount) {
-      const shuffledDice = shuffle(diceList).slice(0, 3);
-      setOptions(shuffledDice);
-    } else {
-      checkCards(draftedChar!);
-    }
-  };
-
-  const checkCards = (char: Character) => {
-    if (extraCards.length >= 3) {
-      const cardsNeeded = char.defaultExtraCardIds ? char.defaultExtraCardIds.length : 1;
-      const count = Math.max(1, cardsNeeded); // Let's give them 1 or 2
-      const finalCount = count > 2 ? 2 : count;
-      setCardsToDraft(finalCount);
-      
+    } else if (finalCount > 0 && extraCards.length >= 3) {
       const shuffledCards = shuffle(extraCards).slice(0, 3);
       setOptions(shuffledCards);
       setPhase('select_cards');
@@ -95,11 +132,29 @@ export function DraftPanel() {
     }
   };
 
+  const handleSelectDice = (dice: CustomDice) => {
+    const newDiceList = [...draftedDice, dice];
+    setDraftedDice(newDiceList);
+    
+    if (newDiceList.length < targetDiceCount) {
+      const shuffledDice = shuffle(diceList).slice(0, 3);
+      setOptions(shuffledDice);
+    } else {
+      if (draftedCards.length < targetCardCount && extraCards.length >= 3) {
+        const shuffledCards = shuffle(extraCards).slice(0, 3);
+        setOptions(shuffledCards);
+        setPhase('select_cards');
+      } else {
+        setPhase('ready');
+      }
+    }
+  };
+
   const handleSelectCard = (card: ExtraCard) => {
     const newCardList = [...draftedCards, card];
     setDraftedCards(newCardList);
     
-    if (newCardList.length < cardsToDraft && extraCards.length >= 3) {
+    if (newCardList.length < targetCardCount && extraCards.length >= 3) {
       const shuffledCards = shuffle(extraCards).slice(0, 3);
       setOptions(shuffledCards);
     } else {
@@ -114,17 +169,18 @@ export function DraftPanel() {
     let botCards: ExtraCard[] = [];
     if (extraCards.length > 0) {
       const cardsNeeded = botChar.defaultExtraCardIds ? botChar.defaultExtraCardIds.length : 1;
-      const count = Math.max(1, cardsNeeded > 2 ? 2 : cardsNeeded);
+      let baseCount = Math.max(1, cardsNeeded > 2 ? 2 : cardsNeeded);
+      let count = baseCount + (level - 1) * 2; // Increase by 2 every level (5 wins)
       botCards = Array.from({ length: count }).map(() => extraCards[Math.floor(Math.random() * extraCards.length)]);
     }
 
     return {
-      id: `bot_${Math.random()}`,
+      id: 'p2',
       isBot: true,
       character: botChar,
       dice: botDice,
       extraCards: botCards,
-      currentHealth: botChar.baseHealth,
+      currentHealth: botChar.baseHealth + (level - 1) * 10, // Small health bump per level
       currentShield: 0
     };
   };
@@ -133,12 +189,12 @@ export function DraftPanel() {
     if (!draftedChar) return;
     
     const p1: BattlePlayer = {
-      id: 'p1_draft',
+      id: 'p1',
       isBot: false,
       character: draftedChar,
       dice: draftedDice,
       extraCards: draftedCards,
-      currentHealth: draftedChar.baseHealth,
+      currentHealth: draftedChar.baseHealth, // Optionally we could preserve health, but full heal for now
       currentShield: 0
     };
 
@@ -150,13 +206,13 @@ export function DraftPanel() {
   };
 
   const handleBattleEnd = (winnerId: string) => {
-    if (winnerId === 'p1_draft') {
+    if (winnerId === 'p1') {
       const newWins = wins + 1;
       setWins(newWins);
       if (battleP2) {
         setDefeatedEnemies(prev => [...prev, battleP2.character]);
       }
-      if (newWins >= 5) {
+      if (newWins >= level * 5) {
         setPhase('victory');
       } else {
         setPhase('ready'); // Ready for next battle
@@ -166,11 +222,18 @@ export function DraftPanel() {
     }
   };
 
+  const abandonRun = () => {
+    if (confirm("Are you sure you want to abandon the current run? All progress will be lost.")) {
+      setPhase('intro');
+    }
+  };
+
   if (phase === 'battle' && battleP1 && battleP2) {
     return (
       <div className="h-full flex flex-col animate-in fade-in zoom-in duration-300">
-        <div className="bg-indigo-900/40 border-b border-indigo-500/30 p-2 text-center text-xs font-bold text-indigo-300 uppercase tracking-widest shrink-0">
-          Gauntlet Run: Match {wins + 1} of 5
+        <div className="bg-indigo-900/40 border-b border-indigo-500/30 p-2 text-center text-xs font-bold text-indigo-300 uppercase tracking-widest shrink-0 flex justify-between px-4 items-center">
+          <span>Level {level} • Enemies Defeated: {wins}</span>
+          <span>Match {wins - ((level - 1) * 5) + 1} of 5</span>
         </div>
         <div className="flex-1 overflow-hidden relative">
            <BattlePanel p1={battleP1} p2={battleP2} onEndGame={(winner) => handleBattleEnd(winner === 'p1' ? battleP1.id : battleP2.id)} />
@@ -181,19 +244,93 @@ export function DraftPanel() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-300 pb-12">
-      <div className="text-center mb-12">
+      <div className="text-center mb-6">
         <h2 className="text-4xl font-black tracking-tight text-white uppercase mb-2">DRAFT GAUNTLET</h2>
-        <p className="text-slate-400">Build a deck on the fly and survive 5 random opponents.</p>
+        <p className="text-slate-400 mb-4">Build a deck on the fly and survive random opponents.</p>
+        <button 
+          onClick={() => setShowDebug(!showDebug)} 
+          className="text-[10px] text-slate-600 hover:text-slate-400 font-bold uppercase tracking-widest transition-colors"
+        >
+          {showDebug ? "Hide Debug State" : "Show Debug State"}
+        </button>
       </div>
 
+      {showDebug && (
+        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-xs font-mono text-slate-300 overflow-auto max-h-64 shadow-inner mb-6">
+          <pre>{JSON.stringify({ phase, wins, level, targetDiceCount, targetCardCount, optionsCount: options?.length, draftedCharId: draftedChar?.id, draftedDiceCount: draftedDice?.length, draftedCardsCount: draftedCards?.length }, null, 2)}</pre>
+        </div>
+      )}
+
+      {phase !== 'intro' && phase !== 'game_over' && phase !== 'victory' && phase !== 'battle' && (
+        <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg mb-8">
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Current Level</div>
+              <div className="text-2xl font-black text-indigo-400">{level}</div>
+            </div>
+            <div className="h-8 w-px bg-slate-800"></div>
+            <div className="text-center">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Matches Won</div>
+              <div className="text-2xl font-black text-emerald-400">{wins}</div>
+            </div>
+          </div>
+          <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center gap-4">
+            <div className="bg-indigo-950/50 border border-indigo-500/30 px-4 py-2 rounded-lg text-center sm:text-right">
+              <div className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">Next Reward (Win {level * 5})</div>
+              <div className="text-sm font-bold text-white">+1 Die Slot, +1 Extra Card</div>
+              <div className="text-[10px] text-rose-400 mt-0.5">Enemies get +2 Cards</div>
+            </div>
+            <button 
+              onClick={abandonRun}
+              className="px-3 py-1.5 bg-rose-950/50 hover:bg-rose-900 border border-rose-900/50 rounded text-xs font-bold text-rose-400 transition-colors"
+            >
+              Abandon Run
+            </button>
+          </div>
+        </div>
+      )}
+
       {phase === 'intro' && (
-        <div className="flex justify-center">
-          <button 
-            onClick={startDraft}
-            className="px-12 py-6 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-full font-black text-2xl text-white shadow-[0_0_40px_rgba(79,70,229,0.4)] border-t border-white/20 active:translate-y-1 transition-transform tracking-widest uppercase hover:scale-105"
-          >
-            START RUN
-          </button>
+        <div className="flex justify-center mt-12">
+          {initialState && initialState.phase !== 'intro' ? (
+            <div className="flex flex-col items-center gap-6">
+              <button 
+                onClick={() => {
+                  setPhase(initialState.phase);
+                  setWins(initialState.wins);
+                  setLevel(initialState.level);
+                  setOptions(initialState.options);
+                  setDraftedChar(initialState.draftedChar);
+                  setDraftedDice(initialState.draftedDice);
+                  setDraftedCards(initialState.draftedCards);
+                  setTargetDiceCount(initialState.targetDiceCount);
+                  setTargetCardCount(initialState.targetCardCount);
+                  setBattleP1(initialState.battleP1);
+                  setBattleP2(initialState.battleP2);
+                  setDefeatedEnemies(initialState.defeatedEnemies);
+                }}
+                className="px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full font-black text-2xl text-white shadow-[0_0_40px_rgba(16,185,129,0.4)] border-t border-white/20 active:translate-y-1 transition-transform tracking-widest uppercase hover:scale-105"
+              >
+                RESUME RUN (Level {initialState.level}, {initialState.wins} Wins)
+              </button>
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('draft_state');
+                  startDraft();
+                }}
+                className="px-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-full font-bold text-sm text-slate-300 transition-colors uppercase tracking-widest"
+              >
+                START NEW RUN
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={startDraft}
+              className="px-12 py-6 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-full font-black text-2xl text-white shadow-[0_0_40px_rgba(79,70,229,0.4)] border-t border-white/20 active:translate-y-1 transition-transform tracking-widest uppercase hover:scale-105"
+            >
+              START RUN
+            </button>
+          )}
         </div>
       )}
 
@@ -201,9 +338,9 @@ export function DraftPanel() {
         <div className="space-y-6">
           <h3 className="text-xl font-bold text-center text-indigo-400 uppercase tracking-widest">Select your Champion</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {options.map((char: Character) => (
+            {Array.isArray(options) && options.filter(Boolean).map((char: Character, idx) => (
               <button 
-                key={char.id} 
+                key={char.id || `char-${idx}`} 
                 onClick={() => handleSelectChar(char)}
                 className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-indigo-500 hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all text-left flex flex-col hover:-translate-y-1"
               >
@@ -232,18 +369,18 @@ export function DraftPanel() {
         <div className="space-y-6">
           <div className="text-center">
             <h3 className="text-xl font-bold text-amber-400 uppercase tracking-widest">Select a Dice</h3>
-            <p className="text-slate-400 text-sm mt-2">Dice {draftedDice.length + 1} of {draftedChar?.diceCount}</p>
+            <p className="text-slate-400 text-sm mt-2">Dice {draftedDice.length + 1} of {targetDiceCount}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {options.map((dice: CustomDice, idx) => (
+            {Array.isArray(options) && options.filter(Boolean).map((dice: CustomDice, idx) => (
               <button 
-                key={`${dice.id}-${idx}`} 
+                key={dice.id || `dice-${idx}`} 
                 onClick={() => handleSelectDice(dice)}
                 className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-amber-500 hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all text-left hover:-translate-y-1"
               >
                 <h4 className="text-lg font-black text-white mb-6 text-center">{dice.name}</h4>
                 <div className="grid grid-cols-3 gap-3">
-                  {dice.faces.map((f, i) => (
+                  {Array.isArray(dice.faces) && dice.faces.map((f, i) => (
                     <div key={i} className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col items-center justify-center gap-1">
                       <GameIcon type={f} className="w-8 h-8 text-slate-300" />
                     </div>
@@ -259,12 +396,12 @@ export function DraftPanel() {
         <div className="space-y-6">
           <div className="text-center">
             <h3 className="text-xl font-bold text-emerald-400 uppercase tracking-widest">Select an Extra Card</h3>
-            <p className="text-slate-400 text-sm mt-2">Card {draftedCards.length + 1} of {cardsToDraft}</p>
+            <p className="text-slate-400 text-sm mt-2">Card {draftedCards.length + 1} of {targetCardCount}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {options.map((card: ExtraCard, idx) => (
+            {Array.isArray(options) && options.filter(Boolean).map((card: ExtraCard, idx) => (
               <button 
-                key={`${card.id}-${idx}`} 
+                key={card.id || `card-${idx}`} 
                 onClick={() => handleSelectCard(card)}
                 className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all text-left flex flex-col hover:-translate-y-1"
               >
@@ -304,7 +441,7 @@ export function DraftPanel() {
                 <div className="flex gap-3 text-sm mt-2">
                   <span className="text-rose-400 font-bold">♥ {draftedChar.baseHealth}</span>
                   <span className="text-slate-400">•</span>
-                  <span className="text-amber-400 font-bold">⚅ {draftedChar.diceCount} Dice</span>
+                  <span className="text-amber-400 font-bold">⚅ {draftedDice.length} Dice</span>
                 </div>
               </div>
             </div>
@@ -337,7 +474,6 @@ export function DraftPanel() {
           </div>
 
           <div className="text-center">
-            <p className="text-slate-400 mb-6 uppercase tracking-widest text-sm">Matches Won: <span className="text-white font-black text-xl ml-2">{wins} / 5</span></p>
             <button 
               onClick={startNextBattle}
               className="px-10 py-4 bg-rose-600 hover:bg-rose-500 rounded-full font-black text-xl text-white shadow-[0_0_20px_rgba(225,29,72,0.4)] transition-all uppercase tracking-widest hover:scale-105"
@@ -353,7 +489,9 @@ export function DraftPanel() {
           <h2 className="text-6xl font-black text-rose-500 uppercase tracking-tighter">DEFEATED</h2>
           <p className="text-slate-400 text-xl">You survived {wins} match{wins !== 1 ? 'es' : ''}.</p>
           <button 
-            onClick={() => setPhase('intro')}
+            onClick={() => {
+              setPhase('intro');
+            }}
             className="px-8 py-3 bg-slate-800 hover:bg-slate-700 rounded font-bold text-white transition-colors uppercase tracking-wider"
           >
             Return to Menu
@@ -442,14 +580,44 @@ export function DraftPanel() {
             </div>
           </div>
 
+          <div className="flex gap-4 mt-8">
+            <button 
+              onClick={() => {
+                setPhase('intro');
+              }}
+              className="px-8 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full font-bold text-lg text-white transition-all uppercase tracking-widest hover:scale-105 active:scale-95"
+            >
+              Return to Menu
+            </button>
+            <button 
+              onClick={continueLevelUp}
+              className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-full font-black text-xl text-white shadow-[0_0_30px_rgba(79,70,229,0.5)] transition-all uppercase tracking-widest hover:scale-105 active:scale-95 flex items-center gap-2"
+            >
+              <span>Continue Run (Level {level + 1})</span>
+              <span className="text-sm bg-white/20 px-2 py-0.5 rounded ml-2">+1 Dice, +1 Card</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fallback for invalid or corrupted state */}
+      {(!['intro', 'select_character', 'select_dice', 'select_cards', 'ready', 'game_over', 'victory'].includes(phase) || (phase === 'battle' && (!battleP1 || !battleP2)) || (phase === 'ready' && !draftedChar)) && (
+        <div className="text-center space-y-6 py-12">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-rose-400">Invalid Draft State Detected</h2>
+          <p className="text-slate-400 max-w-md mx-auto">The saved draft data is corrupted or incomplete. Please reset the run to start over.</p>
           <button 
-            onClick={() => setPhase('intro')}
-            className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-full font-black text-xl text-white shadow-[0_0_30px_rgba(79,70,229,0.5)] transition-all uppercase tracking-widest mt-8 hover:scale-105 active:scale-95"
+            onClick={() => {
+              localStorage.removeItem('draft_state');
+              setPhase('intro');
+            }}
+            className="px-6 py-3 bg-rose-600 hover:bg-rose-500 rounded-lg font-bold text-white transition-colors"
           >
-            Play Again
+            Reset Draft Mode
           </button>
         </div>
       )}
+
     </div>
   );
 }
